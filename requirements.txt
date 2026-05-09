@@ -1,0 +1,113 @@
+import streamlit as st
+import requests
+from datetime import datetime
+
+st.set_page_config(
+    page_title="개원중 급식",
+    page_icon="🍱",
+    layout="centered"
+)
+
+# -----------------------------
+# 기본 설정
+# -----------------------------
+ATPT_OFCDC_SC_CODE = "B10"  # 서울시교육청
+SD_SCHUL_CODE = "7011113"   # 개원중학교 코드
+
+TODAY = datetime.now().strftime("%Y%m%d")
+
+# 칼로리 기준
+LIMIT_KCAL = 900
+
+# -----------------------------
+# 스타일
+# -----------------------------
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+    color: white;
+}
+
+.big-title {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.card {
+    background-color: #161b22;
+    padding: 24px;
+    border-radius: 20px;
+    margin-top: 20px;
+}
+
+.kcal-ok {
+    color: #00e676;
+    font-weight: bold;
+}
+
+.kcal-over {
+    color: #ff5252;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------------------
+# 제목
+# -----------------------------
+st.markdown('<div class="big-title">🍱 개원중학교 급식</div>', unsafe_allow_html=True)
+
+st.caption("서울 강남구 개포동 · 오늘의 급식")
+
+# -----------------------------
+# 급식 API 호출
+# -----------------------------
+url = (
+    f"https://open.neis.go.kr/hub/mealServiceDietInfo"
+    f"?ATPT_OFCDC_SC_CODE={ATPT_OFCDC_SC_CODE}"
+    f"&SD_SCHUL_CODE={SD_SCHUL_CODE}"
+    f"&MLSV_YMD={TODAY}"
+    f"&Type=json"
+)
+
+response = requests.get(url)
+
+try:
+    data = response.json()
+
+    meal_info = data["mealServiceDietInfo"][1]["row"][0]
+
+    menu = meal_info["DDISH_NM"].replace("<br/>", "\n")
+    kcal_text = meal_info["CAL_INFO"]
+
+    kcal = int(float(kcal_text.split(" ")[0]))
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
+    st.subheader("오늘의 메뉴")
+
+    st.text(menu)
+
+    st.divider()
+
+    st.subheader("칼로리")
+
+    st.write(f"🔥 {kcal} kcal")
+
+    if kcal <= LIMIT_KCAL:
+        st.markdown(
+            f'<p class="kcal-ok">✅ {LIMIT_KCAL} kcal 이하입니다.</p>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f'<p class="kcal-over">⚠️ {LIMIT_KCAL} kcal 초과입니다.</p>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+except:
+    st.error("오늘 등록된 급식 정보가 없습니다.")
